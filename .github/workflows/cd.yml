@@ -8,37 +8,46 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v2
-      -
-        name: Set docker image name env
+
+      - name: Set docker image name env
         run: echo ::set-env name=DOCKER_IMAGE_NAME::${{ github.repository }}
-      -
-        name: Set docker image tag env
-        run: echo ::set-env name=DOCKER_TAG_VERSION::${{ github.ref }}
-      -
-        name: Set up QEMU
+
+      - name: Generate semantic tag
+        uses: paulhatch/semantic-version@v4.0.2
+        id: semver
+        with:
+          tag_prefix: "v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)"
+          format: "${major}.${minor}.${patch}-prerelease${increment}"
+
+      - name: Set docker image tag env
+        run: echo ::set-env name=DOCKER_TAG_VERSION::${ output.semver.version }
+
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
-      -
-        name: Set up Docker Buildx
+
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-      -
-        name: Login to DockerHub
+
+      - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_API_KEY }}
-      -
-        name: Build and push
+
+      - name: Build and push
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: ./Dockerfile
+          file: ./deployments/Dockerfile-build
           push: true
           tags: |
             ${{ env.DOCKER_IMAGE_NAME }}:${{ env.DOCKER_TAG_VERSION }}
             ${{ env.DOCKER_IMAGE_NAME }}:latest
+
   updateK8s:
     name: updateK8s
     runs-on: ubuntu-latest
