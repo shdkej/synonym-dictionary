@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: synonym-dictionary
-        image: shdkej/synonym-dictionary:0.0.2-prerelease11
+        image: shdkej/synonym-dictionary:0.0.2-prerelease13
         resources:
           requests:
             cpu: 100m
