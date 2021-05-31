@@ -7,6 +7,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{steps.semver.outputs.version}}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -15,9 +17,8 @@ jobs:
 
       - name: Set docker image name env
         run: |
-          echo "shdkej"
-          echo "${{ github.event.repository.name }}"
-          echo "DOCKER_IMAGE_NAME=shdkej/${{ github.event.repository.name }}" >> $GITHUB_ENV
+          #echo "DOCKER_IMAGE_NAME=shdkej/${{ github.event.repository.name }}" >> $GITHUB_ENV
+          echo "DOCKER_IMAGE_NAME=${{ github.repository }}" >> $GITHUB_ENV
 
       - name: Generate semantic tag
         uses: paulhatch/semantic-version@v4.0.2
@@ -68,7 +69,7 @@ jobs:
       run: echo "DOCKER_IMAGE_NAME=${{ github.repository }}" >> $GITHUB_ENV
 
     - name: Set docker image tag env
-      run: echo "DOCKER_TAG_VERSION=${ needs.build.steps.semver.outputs.version }" >> $GITHUB_ENV
+      run: echo "DOCKER_TAG_VERSION=${{ needs.build.outputs.version }}" >> $GITHUB_ENV
 
     - name: Update Kubernetes resources
       env:
