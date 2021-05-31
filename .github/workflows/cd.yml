@@ -76,7 +76,7 @@ jobs:
         DOCKER_IMAGE_NAME: ${{ env.DOCKER_IMAGE_NAME }}:${{ env.DOCKER_TAG_VERSION }}
       run: |
        cd deployments
-       sed -i '/image/s/[^:]*$/${{ env.DOCKER_TAG_VERSION }}' application.yml
+       sed -i '/image/s/[^:]*$/${{ env.DOCKER_TAG_VERSION }}/' app.yml
 
     - name: Commit files
       run: |
