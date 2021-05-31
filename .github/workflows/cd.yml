@@ -26,7 +26,7 @@ jobs:
           format: "${major}.${minor}.${patch}-prerelease${increment}"
 
       - name: Set docker image tag env
-        run: echo "DOCKER_TAG_VERSION=${ output.semver.version }" >> $GITHUB_ENV
+        run: echo "DOCKER_TAG_VERSION=${ steps.semver.outputs.version }" >> $GITHUB_ENV
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -63,7 +63,7 @@ jobs:
       run: echo "DOCKER_IMAGE_NAME=${{ github.repository }}" >> $GITHUB_ENV
 
     - name: Set docker image tag env
-      run: echo "DOCKER_TAG_VERSION=${ needs.build.output.semver.version }" >> $GITHUB_ENV
+      run: echo "DOCKER_TAG_VERSION=${ needs.build.steps.semver.outputs.version }" >> $GITHUB_ENV
 
     - name: Update Kubernetes resources
       env:
