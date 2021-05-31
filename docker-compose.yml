@@ -1,0 +1,30 @@
+version: "2"
+services:
+    synonym-server:
+        build: ./deployments
+        volumes:
+            - ./:/src/
+        working_dir: /src
+        command: gin -a 8080 -i run main.go
+        ports:
+          - 8080:8080
+          - 9090:9090
+        environment:
+          - ELASTICSEARCH_HOST=es
+          - INDEX=analyze
+        depends_on:
+          - synonym-elasticsearch
+    synonym-elasticsearch:
+      build:
+        context: ./deployments
+        dockerfile: Dockerfile-elasticsearch
+      container_name: es
+      volumes:
+          - ./dictionary/userdict.txt:/usr/share/elasticsearch/config/userdict.txt
+          - ./dictionary/synonyms.txt:/usr/share/elasticsearch/config/synonyms.txt
+      ports:
+        - 9200:9200
+      environment:
+        - discovery.type=single-node
+        - cluster.name=docker-cluster
+        - ES_JAVA_OPTS=-Xms1g -Xmx1g

@@ -1,0 +1,50 @@
+syntax = "proto3";
+option go_package = "github.com/shdkej/synonym-dict/pb";
+package dict;
+
+import "google/api/annotations.proto";
+import "google/api/httpbody.proto";
+
+service SynonymDict {
+    rpc CreateSynonym (Request) returns (Synonym) {
+        option (google.api.http) = {
+            post: "/synonym"
+            body: "*"
+        };
+    }
+    rpc GetAll (Request) returns (google.api.HttpBody) {
+        option (google.api.http) = {
+            get: "/synonym"
+        };
+    }
+    rpc GetSynonym (Request) returns (google.api.HttpBody) {
+        option (google.api.http) = {
+            get: "/synonym/{name}"
+        };
+    }
+    rpc DeleteSynonym (Synonym) returns (Response) {
+        option (google.api.http) = {
+            delete: "/synonym/{name}"
+        };
+    }
+    rpc Update (Request) returns (Synonym) {
+        option (google.api.http) = {
+            post: "/synonym/{name}"
+            body: "*"
+        };
+    }
+}
+
+message Request {
+    string name = 1;
+    string tags = 2;
+}
+
+message Synonym {
+    string name = 1;
+    string tags = 2;
+}
+
+message Response {
+    string body = 1;
+}

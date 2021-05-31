@@ -1,0 +1,4 @@
+version: v1beta1
+name: buf.build/shdkej/synonym-dict
+deps:
+  - buf.build/beta/googleapis
