@@ -14,7 +14,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set docker image name env
-        run: echo "DOCKER_IMAGE_NAME=${{ github.repository }}" >> $GITHUB_ENV
+        run: echo "DOCKER_IMAGE_NAME=shdkej/${{ github.repository#*/ }}" >> $GITHUB_ENV
 
       - name: Generate semantic tag
         uses: paulhatch/semantic-version@v4.0.2
