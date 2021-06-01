@@ -1,4 +1,4 @@
-package dictionary
+package es
 
 import (
 	"context"
@@ -11,9 +11,20 @@ import (
 )
 
 type Elastic struct {
-	client *elastic.Client
-	index  string
-	ctx    context.Context
+	client  *elastic.Client
+	index   string
+	mapping string
+	ctx     context.Context
+}
+
+func CreateElasticsearch() (*Elastic, error) {
+	e := &Elastic{}
+	e.SetIndex("analyze")
+	err := e.Init()
+	if err != nil {
+		return nil, err
+	}
+	return e, nil
 }
 
 func (e *Elastic) Init() error {
@@ -24,55 +35,18 @@ func (e *Elastic) Init() error {
 	}
 	e.client, err = elastic.NewClient(elastic.SetURL("http://" + host + ":9200"))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	e.index = "analyze"
 	e.ctx = context.Background()
 	exists, err := e.client.IndexExists(e.index).Do(e.ctx)
 	if err != nil {
-		log.Println("check es index exist ", err)
 		return err
 	}
 
 	if !exists {
-		mapping := `{
-  "settings": {
-    "analysis": {
-      "tokenizer": {
-        "nori_user_dict": {
-          "type": "nori_tokenizer",
-          "decompound_mode": "mixed",
-          "user_dictionary": "userdict.txt"
-        }
-      },
-      "analyzer": {
-        "korean_analyzer": {
-          "filter": [
-            "pos_filter_speech", "nori_readingform",
-            "lowercase", "synonym", "remove_duplicates"
-          ],
-          "tokenizer": "nori_user_dict"
-        }
-      },
-      "filter": {
-        "synonym" : {
-          "type" : "synonym_graph",
-          "synonyms_path" : "synonyms.txt"
-        },
-        "pos_filter_speech": {
-          "type": "nori_part_of_speech",
-          "stoptags": [
-            "E", "J", "SC", "SE", "SF", "SP", "SSC", "SSO", "SY", "VCN", "VCP",
-            "VSV", "VX", "XPN", "XSA", "XSN", "XSV"
-          ]
-        }
-      }
-    }
-  }
-}`
-		_, err := e.client.CreateIndex(e.index).BodyString(mapping).Do(e.ctx)
+		_, err := e.client.CreateIndex(e.index).BodyString(e.mapping).Do(e.ctx)
 		if err != nil {
-			log.Fatal("create es index", err)
+			log.Println("create es index", err)
 		}
 	}
 	log.Println("Elasticsearch Initial Complete")
@@ -87,12 +61,15 @@ func (e *Elastic) Hits(key string) error {
 	return nil
 }
 
-func (e *Elastic) SetIndex(index string) string {
+func (e *Elastic) SetIndex(index string) {
 	e.index = index
-	return index
 }
 
-func (e *Elastic) GetAll() ([]Tag, error) {
+func (e *Elastic) SetMapping(mapping string) {
+	e.mapping = mapping
+}
+
+func (e *Elastic) GetAll() ([]map[string]string, error) {
 	searchResult, err := e.client.
 		Search().
 		Index(e.index).
@@ -101,14 +78,14 @@ func (e *Elastic) GetAll() ([]Tag, error) {
 		Do(e.ctx)
 
 	log.Println(searchResult.TotalHits())
-	var notes []Tag
+	var notes []map[string]string
 	if err != nil {
 		log.Println("Get occured Error ", err)
 		return notes, err
 	}
 
 	for _, hit := range searchResult.Hits.Hits {
-		var n Tag
+		var n map[string]string
 		err := json.Unmarshal(hit.Source, &n)
 		if err != nil {
 			log.Println("Failed Unmarshal", err)
@@ -120,7 +97,7 @@ func (e *Elastic) GetAll() ([]Tag, error) {
 	return notes, nil
 }
 
-func (e *Elastic) GetSynonym(key string) ([]Tag, error) {
+func (e *Elastic) GetSynonym(key string) ([]map[string]string, error) {
 	query := elastic.NewMultiMatchQuery(key, "Name", "Tags")
 	query = query.Analyzer("korean_analyzer")
 	searchResult, err := e.client.
@@ -131,14 +108,14 @@ func (e *Elastic) GetSynonym(key string) ([]Tag, error) {
 		Do(e.ctx)
 
 	log.Println(searchResult.TotalHits())
-	var notes []Tag
+	var notes []map[string]string
 	if err != nil {
 		log.Println("Get Synonyms occured Error ", err)
 		return notes, err
 	}
 
 	for _, hit := range searchResult.Hits.Hits {
-		var n Tag
+		var n map[string]string
 		err := json.Unmarshal(hit.Source, &n)
 		if err != nil {
 			log.Println("Failed Unmarshal", err)
@@ -162,12 +139,12 @@ func (e *Elastic) Get(key string) (string, error) {
 	return result, nil
 }
 
-func (e *Elastic) Set(tag Tag) error {
+func (e *Elastic) Set(tag map[string]interface{}) error {
 	now := time.Now().Format("2006-01-02")
-	tag.UpdatedAt = now
+	tag["UpdatedAt"] = now
 	_, err := e.client.Index().
 		Index(e.index).
-		Id(tag.Name).
+		Id(tag["Name"].(string)).
 		BodyJson(tag).
 		Do(context.Background())
 
@@ -180,7 +157,8 @@ func (e *Elastic) Set(tag Tag) error {
 
 func (e *Elastic) Update(key string, new_value string) error {
 	_, err := e.client.Update().Index(e.index).Id(key).
-		Doc(map[string]interface{}{"Tags": new_value}).
+		DocAsUpsert(true).
+		Doc(map[string]interface{}{"Name": key, "Tags": new_value}).
 		Do(e.ctx)
 	if err != nil {
 		log.Println("Update Error:", err)

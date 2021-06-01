@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: synonym-es
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: synonym-es
+  template:
+    metadata:
+      labels:
+        app: synonym-es
+    spec:
+      containers:
+      - name: synonym-es
+        image: shdkej/synonym-es:0.0.2-prerelease13
+        resources:
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: synonym-es
+  namespace: default
+  labels:
+    app: synonym-es
+spec:
+  ports:
+  - port: 9200
+    targetPort: 9200
+    protocol: TCP
+  selector:
+    app: synonym-es

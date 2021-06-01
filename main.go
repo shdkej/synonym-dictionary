@@ -8,10 +8,14 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/fatih/structs"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	elastic "github.com/shdkej/synoym-dict/dictionary"
+	"github.com/shdkej/synoym-dict/dictionary"
+	elastic "github.com/shdkej/synoym-dict/elastic"
 	pb "github.com/shdkej/synoym-dict/proto"
+	"github.com/tinrab/retry"
 	"google.golang.org/genproto/googleapis/api/httpbody"
 	"google.golang.org/grpc"
 )
@@ -27,8 +31,9 @@ type DictServer struct {
 }
 
 func (s *DictServer) CreateSynonym(ctx context.Context, r *pb.Request) (*pb.Synonym, error) {
-	tag := elastic.Tag{Name: r.GetName()}
-	err := es.Set(tag)
+	tag := dictionary.Tag{Name: r.GetName()}
+	m := structs.Map(tag)
+	err := es.Set(m)
 	if err != nil {
 		log.Println(err)
 	}
@@ -80,15 +85,59 @@ func (s *DictServer) Update(ctx context.Context, r *pb.Request) (*pb.Synonym, er
 	return &pb.Synonym{Name: name, Tags: tag}, nil
 }
 
-var es elastic.Elastic
+var es *elastic.Elastic
 
 func main() {
 	flag.Parse()
 
-	s := &DictServer{}
-	es = elastic.Elastic{}
-	es.Init()
+	mapping := `{
+  "settings": {
+    "analysis": {
+      "tokenizer": {
+        "nori_user_dict": {
+          "type": "nori_tokenizer",
+          "decompound_mode": "mixed",
+          "user_dictionary": "userdict.txt"
+        }
+      },
+      "analyzer": {
+        "korean_analyzer": {
+          "filter": [
+            "pos_filter_speech", "nori_readingform",
+            "lowercase", "synonym", "remove_duplicates"
+          ],
+          "tokenizer": "nori_user_dict"
+        }
+      },
+      "filter": {
+        "synonym" : {
+          "type" : "synonym_graph",
+          "synonyms_path" : "synonyms.txt"
+        },
+        "pos_filter_speech": {
+          "type": "nori_part_of_speech",
+          "stoptags": [
+            "E", "J", "SC", "SE", "SF", "SP", "SSC", "SSO", "SY", "VCN", "VCP",
+            "VSV", "VX", "XPN", "XSA", "XSN", "XSV"
+          ]
+        }
+      }
+    }
+  }
+}`
 
+	retry.ForeverSleep(2*time.Second, func(_ int) error {
+		var err error
+		es, err = elastic.CreateElasticsearch()
+		if err != nil {
+			log.Println("retry", err)
+			return err
+		}
+		es.SetMapping(mapping)
+		return nil
+	})
+
+	s := &DictServer{}
 	if err := s.Run(); err != nil {
 		log.Fatal(err)
 	}
