@@ -1,3 +1,6 @@
 FROM docker.elastic.co/elasticsearch/elasticsearch:7.7.0
+WORKDIR /usr/share/elasticsearch/
+COPY ./dictionary/synonyms.txt ./config/synonyms.txt
+COPY ./dictionary/userdict.txt ./config/userdict.txt
 WORKDIR /usr/share/elasticsearch/bin/
 RUN elasticsearch-plugin install analysis-nori
