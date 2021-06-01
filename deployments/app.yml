@@ -37,3 +37,18 @@ spec:
     protocol: TCP
   selector:
     app: synonym-dictionary
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: synonym-dictionary
+  namespace: default
+spec:
+  rules:
+  - host: dict.minikube
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: synonym-dictionary
+          servicePort: 8080
