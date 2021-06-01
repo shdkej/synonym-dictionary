@@ -21,13 +21,19 @@ jobs:
           echo "DOCKER_IMAGE_NAME=${{ github.repository }}" >> $GITHUB_ENV
 
       - name: Generate semantic tag
-        uses: paulhatch/semantic-version@v4.0.2
-        id: semver
+        uses: phips28/gh-action-bump-version@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_prefix: "v"
-          major_pattern: "(MAJOR)"
-          minor_pattern: "(MINOR)"
-          format: "${major}.${minor}.${patch}-prerelease${increment}"
+          default: prerelease
+      #  uses: paulhatch/semantic-version@v4.0.2
+      #  id: semver
+      #  with:
+      #    tag_prefix: "v"
+      #    major_pattern: "(MAJOR)"
+      #    minor_pattern: "(MINOR)"
+      #    format: "${major}.${minor}.${patch}-prerelease${increment}"
+
 
       - name: Set docker image tag env
         run: |
