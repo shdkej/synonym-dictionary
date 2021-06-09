@@ -3,4 +3,5 @@ RUN apk add --no-cache git
 WORKDIR /go/src/github.com/shdkej/project
 COPY . .
 ENV ELASTICSEARCH_HOST=synonym-es
-CMD go run main.go
+RUN go build main.go
+CMD ./main
